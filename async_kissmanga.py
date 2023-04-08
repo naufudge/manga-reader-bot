@@ -1,8 +1,6 @@
 from bs4 import BeautifulSoup
 import httpx
 import asyncio
-import time
-from threading import Thread
 
 def no_cap_dict(d):
     """
