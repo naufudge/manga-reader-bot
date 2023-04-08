@@ -6,5 +6,6 @@ This is just a discord bot that can be used to read any manga which is available
 - `/manga [manga name] [chapter number]` -> Start reading any manga that you want
 - `/manga_search [manga name]` -> Search for a manga
 
-If you need any help, feel free to DM me on discord; Nauf#0709
+If you need any help, feel free to DM me on discord *Nauf#0709*
+
 Feedback is also greatly appreciated. Thank you!
