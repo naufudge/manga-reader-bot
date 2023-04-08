@@ -5,9 +5,10 @@ import asyncio
 from typing import List
 from collections import deque
 from async_kissmanga import Async_KissManga, no_cap_dict
-import json, typing
+import json, typing, random
 
 intents = discord.Intents.all()
+colors = [0xffffff, 0x000000]
 
 class ChapterPagination(discord.ui.View):
     def __init__(self, embeds: List[discord.Embed], title: str):
@@ -51,7 +52,7 @@ class ChapterPagination(discord.ui.View):
 
     @discord.ui.button(emoji="🛑", style=discord.ButtonStyle.red)
     async def stopBtn(self, interaction: discord.Interaction, _):
-        embed = discord.Embed(title=f"Thank you for reading '__{self._title}__'" ,description=f"Please do read again! Thank you :)", color=0xfcffdc)
+        embed = discord.Embed(title=f"Thank you for reading '__{self._title}__'" ,description=f"Please do read again! Thank you :)", color=random.choice(colors))
         self.stop()
         await self.update_buttons(interaction, stop=1)
         await interaction.response.edit_message(embed=embed)
@@ -116,7 +117,7 @@ def run_discord_bot():
         pages = km.read_chap(chap_link)
         page_embeds = []
         for each_page in pages:
-            page_embed = discord.Embed(title=f"{chapters[int(chapter)-1][0]}", description=f"Page {pages.index(each_page)+1}/{len(pages)+1}", color=0xfcffdc)
+            page_embed = discord.Embed(title=f"{chapters[int(chapter)-1][0]}", description=f"Page {pages.index(each_page)+1}/{len(pages)+1}", color=random.choice(colors))
             page_embed.set_image(url=each_page)
             page_embeds.append(page_embed)
         buttons = [u"\u23EA", u"\u2B05", u"\U0001F6AB", u"\u27A1", u"\u23E9"] # skip to start, left, stop, right, skip to end
@@ -151,7 +152,7 @@ def run_discord_bot():
                     current_page = len(pages)-1
 
                 elif reaction.emoji == u"\U0001F6AB":
-                    finish_embed = discord.Embed(title=f"Thank you for reading '__{chapters[int(chapter)-1][0]}__'" ,description=f"Please do continue reading :) Thank you!", color=0xfcffdc)
+                    finish_embed = discord.Embed(title=f"Thank you for reading '__{chapters[int(chapter)-1][0]}__'" ,description=f"Please do continue reading :) Thank you!", color=random.choice(colors))
                     await msg.edit(embed=finish_embed)
                     return
 
@@ -165,13 +166,15 @@ def run_discord_bot():
     @client.tree.command(name="help", description="Get help on how to use the bot")
     @app_commands.describe(command="If there's a specific command you need help with type here")
     async def nau_help(interaction: discord.Interaction, command: typing.Optional[str]):
-        help_embed = discord.Embed(title="__Help__", color=0x974dae ,description="Find all the supported slash commands of this bot below. If you want more information on specific commands, use: ``/help command: <name of command>``\n")
+        help_embed = discord.Embed(title="__Help__", color=0xffffff ,description="Find all the supported slash commands of this bot below. If you want more information on specific commands, use: ``/help command: <name of command>``\n")
         help_embed.add_field(name="``/manga <name of manga> <chapter number>``", value="Start reading any manga that is available in the kissmanga database!", inline=False)
-        help_embed.add_field(name="``/manga_search <name of manga>``", value="Lookup any manga that you're looking for and check if it's available", inline=False)
+        help_embed.add_field(name="``/manga_search <name of manga>``", value="Search for any manga that you're looking for and check if it's available.", inline=False)
+        help_embed.add_field(name="``/manga_info <name of manga>``", value="Get some info about a sepcific manga.", inline=False)
+        help_embed.set_footer(text="Made with love by Nauf :)")
         await interaction.response.send_message(embed=help_embed)
 
 
-    @client.tree.command(name="manga")
+    @client.tree.command(name="manga", description="Start reading any manga that you like!")
     @app_commands.describe(manga_name="What's the name of the manga you want?")
     @app_commands.describe(chapter="Which chapter of the manga would you like to read?")
     async def manga_slash(interaction: discord.Interaction, manga_name: str, chapter: int):
@@ -179,17 +182,17 @@ def run_discord_bot():
         await interaction.response.defer()
         search = await km.Search(manga_name)
         try:
-            exact_search = no_cap_dict(search)[manga_name.lower()]
+            exact_search = no_cap_dict(search)[manga_name.lower()] # Link of the exact search item
         except KeyError:
-            await interaction.followup.send(f"Could not find a manga for '___{manga_name}___' :(")
-            list_of_results = list(search.keys())
+            list_of_results = km.search_results_sorter(list(search.keys()), manga_name)
+            # print(list_of_results)
             # results = ', '.join(list_of_results)
-            if list_of_results != None:
-                temp_results = sorted(list_of_results)[0:15]
+            if list_of_results != None and list_of_results != []:
+                temp_results = list_of_results[0:15]
                 temp_results = '\n'.join(temp_results)
-                await interaction.followup.send(f"**Did you mean any of the titles below?**\n{temp_results}")
+                await interaction.followup.send(f"Could not find a manga for '___{manga_name}___' :(\n**Did you mean any of the titles below?**\n{temp_results}")
             else:
-                await interaction.followup.send("No results found :/")
+                await interaction.followup.send(f"Could not find a manga for '___{manga_name}___' :(")
             return
 
         chapters = km.Chapters(exact_search)
@@ -204,7 +207,7 @@ def run_discord_bot():
         pages = km.read_chap(chap_link)
         page_embeds = []
         for each_page in pages:
-            page_embed = discord.Embed(title=f"__{chap_title}__", color=0xfcffdc)
+            page_embed = discord.Embed(title=f"__{chap_title}__", color=random.choice(colors))
             page_embed.set_image(url=each_page)
             page_embeds.append(page_embed)
         view = ChapterPagination(page_embeds, chap_title)
@@ -212,40 +215,53 @@ def run_discord_bot():
 
 
     # Async searching below
-    @client.tree.command(name="manga_search")
+    @client.tree.command(name="manga_search", description="This will give you a list of search results")
     @app_commands.describe(manga_name="What's the name of the manga you want?")
     async def manga_search(interaction: discord.Interaction, manga_name: str):
         km = Async_KissManga()
         await interaction.response.defer()
         searches = await km.Search(manga_name)
-        searches = list(searches.keys())
+        searches = km.search_results_sorter(list(searches.keys()), manga_name)
 
         list_of_results = [f'**Your search for __{manga_name}__ returned the folowing:**']
-        list_of_results += sorted(searches)
+        list_of_results += searches
         if list_of_results != None:
             temp_results = list_of_results[0:20]
             await interaction.followup.send('\n'.join(temp_results))
         else:
-            await interaction.followup.send("No results found :/")
+            await interaction.followup.send(f"Could not find any results for '___{manga_name}___' :(")
 
 
-    # SYNCHRONOUS MANGA SEARCHING BELOW
-    # @client.tree.command(name="manga_search")
-    # @app_commands.describe(manga_name="What's the name of the manga you want?")
-    # async def manga(interaction: discord.Interaction, manga_name: str):
-    #     km = KissManga()
-    #     await interaction.response.defer()
-    #     start_time = time.time()
-    #     searches = list(km.Search(manga_name).keys())
+    @client.tree.command(name="manga_info", description="Gives you some information about the manga.")
+    @app_commands.describe(manga_name="What's the name of the manga you want?")
+    async def manga_search(interaction: discord.Interaction, manga_name: str):
+        km = Async_KissManga()
+        await interaction.response.defer()
+        search = await km.Search(manga_name)
+        try:
+            exact_search = no_cap_dict(search)[manga_name.lower()] # Link of the exact search item
+        except KeyError:
+            list_of_results = km.search_results_sorter(list(search.keys()), manga_name)
+            # results = ', '.join(list_of_results)
+            if list_of_results != None:
+                temp_results = list_of_results[0:15]
+                temp_results = '\n'.join(temp_results)
+                await interaction.followup.send(f"Could not find a manga for '___{manga_name}___' :(\n**Did you mean any of the titles below?**\n{temp_results}")
+            else:
+                await interaction.followup.send(f"Could not find a manga for '___{manga_name}___' :(")
+            return
 
-    #     list_of_results = [f'**Your search for __{manga_name}__ returned the folowing:**']
-    #     list_of_results += searches
-    #     if list_of_results != None:
-    #         temp_results = list_of_results[0:20]
-    #         await interaction.followup.send('\n'.join(temp_results))
-    #         print(f"took {time.time() - start_time} seconds")
-    #     else:
-    #         await interaction.followup.send("No results found :/")
+        all_details = km.mangaInfo(exact_search)
+        info_embed = discord.Embed(title=f"__{all_details['title']}__", color=random.choice(colors))
+        info_embed.add_field(name="Other Names:", value=f"{str(all_details['other name'])}", inline=False)
+        info_embed.add_field(name="Authors:", value=f"*{str(all_details['authors'])}*", inline=False)
+        try:
+            info_embed.add_field(name="Summary:", value=f"*{str(all_details['summary'][0:900])}*", inline=False)
+        except:
+            pass
+        info_embed.set_thumbnail(url=all_details['cover'])
+
+        await interaction.followup.send(embed=info_embed)
 
 
     @client.event
