@@ -5,6 +5,7 @@ This is just a discord bot that can be used to read any manga which is available
 - `/help` -> Lists all commands or just help for a specific command (help for specific commands not available yet)
 - `/manga [manga name] [chapter number]` -> Start reading any manga that you want
 - `/manga_search [manga name]` -> Search for a manga
+- `/manga_info [manga name]` -> Get some information about a manga
 
 #
 If you need any help, feel free to DM me on discord; *Nauf#0709*
